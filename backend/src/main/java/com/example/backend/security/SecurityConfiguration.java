@@ -1,7 +1,7 @@
 package com.example.backend.security;
 
-import com.nimbusds.jose.shaded.json.JSONArray;
-import com.nimbusds.jose.shaded.json.JSONObject;
+import com.nimbusds.jose.shaded.gson.internal.LinkedTreeMap;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.val;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,22 +10,22 @@ import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.web.SecurityFilterChain;
 
-import javax.servlet.http.HttpServletResponse;
 import java.util.Collection;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
+public class SecurityConfiguration {
 
-    @Override
-    protected void configure(HttpSecurity http) throws Exception {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests((authorize) -> authorize
                         .anyRequest().hasRole("prothetic_user"))
@@ -38,6 +38,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 .oauth2ResourceServer(resourceServerConfigurer -> resourceServerConfigurer
                         .jwt(jwtConfigurer -> jwtConfigurer
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter())));
+        return http.build();
     }
 
     @Bean
@@ -59,10 +60,10 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
                 Collection<GrantedAuthority> grantedAuthorities = converter.convert(jwt);
 
                 if (jwt.getClaim("realm_access") != null) {
-                    JSONObject realmAccess = jwt.getClaim("realm_access");
+                    LinkedTreeMap<String, Collection<String>> realmAccess = jwt.getClaim("realm_access");
 
                     if (realmAccess.get("roles") != null) {
-                        JSONArray roles = (JSONArray) realmAccess.get("roles");
+                        val roles = realmAccess.get("roles");
 
                         val keycloakAuthorities = roles.stream()
                                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
